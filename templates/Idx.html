@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <!-- <title>MediaCapture and Streams API</title> -->
+    <meta name="viewport" content="width=device-width">
+    <link rel="stylesheet" href="main.css">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+
+<body>
+    <header>
+        <h1>MediaCapture, MediaRecorder and Streams API</h1>
+    </header>
+    <main>
+
+
+        <p><button id="btnStart">START RECORDING</button><br />
+            <button id="btnStop">STOP RECORDING</button><br />
+            <button id="submit">submit</button>
+
+        </p>
+        <input type="file" name="file" id="fileupload"  accept = '.mp3 ,.wav'>
+
+
+        <audio id="vid2"  type='audio/webm' controls>
+
+
+            <source id="vid2src" src="" type='audio/webm'>
+        </audio>
+
+
+
+
+        <!-- could save to canvas and do image manipulation and saving too -->
+    </main>
+
+
+    <script>
+
+        let constraintObj = {
+            audio: true
+        };
+
+        //handle older browsers that might implement getUserMedia in some way
+        if (navigator.mediaDevices === undefined) {
+            console.log('true')
+            navigator.mediaDevices = {};
+            navigator.mediaDevices.getUserMedia = function (constraintObj) {
+                let getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+                if (!getUserMedia) {
+                    return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
+                }
+                return new Promise(function (resolve, reject) {
+                    getUserMedia.call(navigator, constraintObj, resolve, reject);
+                });
+            }
+        } else {
+            navigator.mediaDevices.enumerateDevices()
+                .then(devices => {
+                    devices.forEach(device => {
+                        console.log(device.kind.toUpperCase(), device.label);
+                        //, device.deviceId
+                    })
+                })
+                .catch(err => {
+                    console.log(err.name, err.message);
+                })
+        }
+
+        let start = document.getElementById('btnStart');
+
+        let mediaRecorder
+        var chunks = []
+        start.addEventListener('click', function () {
+            console.log('start')
+
+
+            navigator.mediaDevices.getUserMedia({
+                audio: true, video: false
+            })
+                .then(function (mediaStreamObj) {
+                    //connect the media stream to the first video element
+
+
+
+                    //add listeners for saving video/audio
+                    let stop = document.getElementById('btnStop');
+                    let vidSave = document.getElementById('vid2src');
+                    let vidshow = document.getElementById('vid2')
+                    mediaRecorder = new MediaRecorder(mediaStreamObj, {mimeType: 'audio/webm'});
+                    chunks = [];
+                    mediaRecorder.start()
+
+
+                    stop.addEventListener('click', (ev) => {
+                        mediaRecorder.stop();
+                        console.log(mediaRecorder.state);
+                    });
+                    mediaRecorder.ondataavailable = function (ev) {
+                        console.log(ev.data)
+                        chunks.push(ev.data);
+                    }
+                    mediaRecorder.onstop = (ev) => {
+                        let blob = new Blob(chunks, { 'type': 'audio/webm' });
+                        let videoURL = window.URL.createObjectURL(blob);
+
+                        vidSave.src = videoURL;
+                        vidshow.src = videoURL;
+                  
+                    }
+                })
+                .catch(function (err) {
+
+                    console.log(err.name, err.message);
+                })
+
+
+        })
+
+
+        document.getElementById('submit').addEventListener('click', () => {
+
+            fetch(document.getElementById('vid2').src).then(res => res.blob()
+            ).then( (blob) => {
+                console.log(blob)
+
+
+                const formData = new FormData();
+                //add the Blob to formData
+                var file = document.getElementById('fileupload').files[0]
+                // console.log('UPLOAD FILE' , file  instanceof  Blob)
+                formData.append('audio', blob, 'recording.webm');
+                axios({url : '/audiofile', data: formData  , method : 'POST' , headers: { "Content-Type": "multipart/form-data" }}).then(result => {
+                    console.log(result)
+                }).catch((err) => {
+                    console.error(err)
+                    alert('error')
+                })
+            }).catch(err => {
+                console.error(err)
+                alert('error')
+            })
+
+        })
+
+
+
+        //         //add listeners for saving video/audio
+        //         let start = document.getElementById('btnStart');
+        //         let stop = document.getElementById('btnStop');
+        //         let vidSave = document.getElementById('vid2');
+        //         let mediaRecorder = new MediaRecorder(mediaStreamObj);
+        //         let chunks = [];
+
+        //         start.addEventListener('click', (ev) => {
+        //             mediaRecorder.start();
+        //             console.log(mediaRecorder.state);
+        //         })
+        //         stop.addEventListener('click', (ev) => {
+        //             mediaRecorder.stop();
+        //             console.log(mediaRecorder.state);
+        //         });
+        //         mediaRecorder.ondataavailable = function (ev) {
+        //             chunks.push(ev.data);
+        //         }
+        //         mediaRecorder.onstop = (ev) => {
+        //             let blob = new Blob(chunks, { 'type': 'audio/mp3;' });
+        //             chunks = [];
+        //             let videoURL = window.URL.createObjectURL(blob);
+        // axios({url : '/audiofile', method : 'GET').then(result => {
+        //             console.log(result)
+        //         }).catch((err) => {
+        //             console.error(err)
+        //             alert('error')
+        //         })
+            
+
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,170 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+
+<head>
+    <meta charset="utf-8">
+    <title>Audio Recording API</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/font-awesome.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/font-awesome.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+
+<body>
+    <div class="audio-recording-container">
+        <h1 class="title">Audio Recording API</h1>
+        <!-- {% block content %} -->
+            <h1>Text is:</h1>
+            <!-- {% if check %}  -->
+               <h2 id="#txt"></h2>  
+            <!-- {% endif %} -->
+            <!-- {% endblock %} -->
+
+        <audio id="vid2"  type='audio/webm' controls>
+            <source id="vid2src" src="" type='audio/webm'>
+        </audio>
+
+
+        <div class="recording-contorl-buttons-container ">
+            <i class="cancel-recording-button fa fa-times-circle-o" id="btnStop" aria-hidden="true"></i>
+            <i class="stop-recording-button fa fa-stop-circle-o" id ='btnStart' aria-hidden="true"></i>
+            <button id="submit">Submit</button>
+            <input type="file" name="file" id="fileupload"  accept = '.mp3 ,.wav' style="display:none ;">
+        </div>
+
+        <div class="text-indication-of-audio-playing-container">
+            <p class="text-indication-of-audio-playing hide">Audio is playing<span>.</span><span>.</span><span>.</span></p>
+        </div>
+    </div>
+    <p>
+    
+
+    <audio controls class="audio-element hide">
+    </audio>
+
+    <script src="{{ url_for('static', filename='js/audio-recording.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/index.js') }}"></script>
+
+
+    <script>
+
+let constraintObj = {
+            audio: true
+        };
+
+        //handle older browsers that might implement getUserMedia in some way
+        if (navigator.mediaDevices === undefined) {
+            console.log('true')
+            navigator.mediaDevices = {};
+            navigator.mediaDevices.getUserMedia = function (constraintObj) {
+                let getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+                if (!getUserMedia) {
+                    return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
+                }
+                return new Promise(function (resolve, reject) {
+                    getUserMedia.call(navigator, constraintObj, resolve, reject);
+                });
+            }
+        } else {
+            navigator.mediaDevices.enumerateDevices()
+                .then(devices => {
+                    devices.forEach(device => {
+                        console.log(device.kind.toUpperCase(), device.label);
+                        //, device.deviceId
+                    })
+                })
+                .catch(err => {
+                    console.log(err.name, err.message);
+                })
+        }
+
+        let start = document.getElementById('btnStart');
+
+        let mediaRecorder
+        var chunks = []
+        start.addEventListener('click', function () {
+            console.log('start')
+
+
+            navigator.mediaDevices.getUserMedia({
+                audio: true, video: false
+            })
+                .then(function (mediaStreamObj) {
+                    //connect the media stream to the first video element
+
+
+
+                    //add listeners for saving video/audio
+                    let stop = document.getElementById('btnStop');
+                    let vidSave = document.getElementById('vid2src');
+                    let vidshow = document.getElementById('vid2')
+                    mediaRecorder = new MediaRecorder(mediaStreamObj, {mimeType: 'audio/webm'});
+                    chunks = [];
+                    mediaRecorder.start()
+
+
+                    stop.addEventListener('click', (ev) => {
+                        mediaRecorder.stop();
+                        console.log(mediaRecorder.state);
+                    });
+                    mediaRecorder.ondataavailable = function (ev) {
+                        console.log(ev.data)
+                        chunks.push(ev.data);
+                    }
+                    mediaRecorder.onstop = (ev) => {
+                        let blob = new Blob(chunks, { 'type': 'audio/webm' });
+                        let videoURL = window.URL.createObjectURL(blob);
+
+                        vidSave.src = videoURL;
+                        vidshow.src = videoURL;
+                  
+                    }
+                })
+                .catch(function (err) {
+
+                    console.log(err.name, err.message);
+                })
+
+
+        })
+
+
+        document.getElementById('submit').addEventListener('click', () => {
+            fetch(document.getElementById('vid2').src).then(res => res.blob()
+            ).then( (blob) => {
+                // console.log(blob)
+
+
+                const formData = new FormData();
+                //add the Blob to formData
+                var file = document.getElementById('fileupload').files[0]
+                // console.log('UPLOAD FILE' , file  instanceof  Blob)
+                formData.append('audio', blob, 'recording.webm');
+
+                axios({url : '/audio', data: formData  , method : 'POST' , headers: { "Content-Type": "multipart/form-data" }}).then(result => {
+                    console.log(result)
+                    alert(result.data.text)
+                    window.location.reload()
+
+
+                }).catch((err) => {
+                    console.error(err)
+                    alert('error')
+                })
+            }).catch(err => {
+                console.error(err)
+                alert('error')
+            })
+
+        })
+
+// var response = '';
+
+
+
+    </script>
+</body>
+
+</html>
