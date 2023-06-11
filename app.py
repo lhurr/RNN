@@ -19,7 +19,7 @@ import subprocess
 app = Flask(__name__)
 
 
-app.config['upload path'] = r'C:\Users\limhu\Desktop\DL'
+app.config['upload path'] = r'C:\Users\limhu\Downloads\Speech-To-Text'
 app.config['Model'] =tf.keras.models.load_model('RNN/soundlstm/' )
 
 @app.route('/' , methods = ['GET'])
